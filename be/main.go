@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/Armatorix/SocialTracker/be/handlers"
+	"github.com/Armatorix/SocialTracker/be/repository"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	_ "github.com/lib/pq"
@@ -15,7 +17,7 @@ func main() {
 	// Get database URL from environment
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
-		dbURL = "postgres://goretro:goretro@localhost:5432/goretro?sslmode=disable"
+		dbURL = "postgres://socialtracker:socialtracker@localhost:5432/socialtracker?sslmode=disable"
 	}
 
 	// Connect to database
@@ -32,6 +34,10 @@ func main() {
 
 	log.Println("Connected to database successfully")
 
+	// Initialize repository and handlers
+	repo := repository.NewRepository(db)
+	h := handlers.NewHandler(repo)
+
 	e := echo.New()
 
 	// Middleware
@@ -43,6 +49,26 @@ func main() {
 	e.GET("/health", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]string{"status": "ok"})
 	})
+
+	// API routes
+	api := e.Group("/api")
+	
+	// User routes
+	api.GET("/user", h.GetCurrentUser)
+	
+	// Social accounts routes
+	api.GET("/social-accounts", h.GetSocialAccounts)
+	api.POST("/social-accounts", h.CreateSocialAccount)
+	api.DELETE("/social-accounts/:id", h.DeleteSocialAccount)
+	api.POST("/social-accounts/:id/pull", h.PullContentFromPlatform)
+	
+	// Content routes
+	api.GET("/content", h.GetContent)
+	api.POST("/content", h.CreateContent)
+	api.DELETE("/content/:id", h.DeleteContent)
+	
+	// Admin routes
+	api.GET("/admin/content", h.GetAllContent)
 
 	// Start server
 	e.Logger.Fatal(e.Start(":8080"))

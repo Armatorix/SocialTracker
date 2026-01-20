@@ -1,30 +1,72 @@
-import { APITester } from "./APITester";
+import { useState, useEffect } from 'react';
+import { api } from './api';
+import type { User } from './types';
+import { AdminDashboard } from './AdminDashboard';
+import { CreatorDashboard } from './CreatorDashboard';
 import "./index.css";
 
-import logo from "./logo.svg";
-import reactLogo from "./react.svg";
-
 export function App() {
-  return (
-    <div className="max-w-7xl mx-auto p-8 text-center relative z-10">
-      <div className="flex justify-center items-center gap-8 mb-8">
-        <img
-          src={logo}
-          alt="Bun Logo"
-          className="h-24 p-6 transition-all duration-300 hover:drop-shadow-[0_0_2em_#646cffaa] scale-120"
-        />
-        <img
-          src={reactLogo}
-          alt="React Logo"
-          className="h-24 p-6 transition-all duration-300 hover:drop-shadow-[0_0_2em_#61dafbaa] animate-[spin_20s_linear_infinite]"
-        />
-      </div>
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-      <h1 className="text-5xl font-bold my-4 leading-tight">Bun + React</h1>
-      <p>
-        Edit <code className="bg-[#1a1a1a] px-2 py-1 rounded font-mono">src/App.tsx</code> and save to test HMR
-      </p>
-      <APITester />
+  useEffect(() => {
+    const loadUser = async () => {
+      try {
+        const userData = await api.getCurrentUser();
+        setUser(userData);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load user');
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadUser();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-xl">Loading...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="bg-red-900/50 border-2 border-red-500 rounded-lg p-6 max-w-md">
+          <h2 className="text-xl font-bold mb-2">Error</h2>
+          <p>{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-xl">No user found</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen">
+      <header className="bg-[#1a1a1a] border-b-2 border-[#fbf0df] p-4">
+        <div className="max-w-7xl mx-auto flex justify-between items-center">
+          <h1 className="text-2xl font-bold">Social Tracker</h1>
+          <div className="flex items-center gap-4">
+            <span className="text-sm">
+              {user.username} ({user.role})
+            </span>
+          </div>
+        </div>
+      </header>
+      
+      <main className="py-6">
+        {user.role === 'admin' ? <AdminDashboard /> : <CreatorDashboard />}
+      </main>
     </div>
   );
 }
