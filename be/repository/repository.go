@@ -117,11 +117,16 @@ func (r *Repository) CreateContent(userID int, req models.CreateContentRequest) 
 	err := r.db.QueryRow(`
 		INSERT INTO content (user_id, social_account_id, platform, link, original_text, description, tags)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		ON CONFLICT (user_id, link) DO NOTHING
 		RETURNING id, user_id, social_account_id, platform, link, original_text, description, tags, external_post_id, posted_at, created_at, updated_at
 	`, userID, req.SocialAccountID, req.Platform, req.Link, req.OriginalText, req.Description, pq.Array(req.Tags)).
 		Scan(&content.ID, &content.UserID, &content.SocialAccountID, &content.Platform, &content.Link, 
 			&content.OriginalText, &content.Description, pq.Array(&content.Tags), &content.ExternalPostID, &content.PostedAt, &content.CreatedAt, &content.UpdatedAt)
 	
+	if err == sql.ErrNoRows {
+		// Duplicate content, return nil without error
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -285,13 +290,13 @@ func (r *Repository) CreateSocialAccountWithTokens(userID int, req models.Create
 	return &account, nil
 }
 
-// CreateSyncedContent inserts synced content with external post ID, skipping duplicates
+// CreateSyncedContent inserts synced content with external post ID, skipping duplicates by user_id + link
 func (r *Repository) CreateSyncedContent(userID int, socialAccountID int, platform string, link string, originalText string, externalPostID string, postedAt time.Time) (*models.Content, error) {
 	var content models.Content
 	err := r.db.QueryRow(`
 		INSERT INTO content (user_id, social_account_id, platform, link, original_text, external_post_id, posted_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
-		ON CONFLICT (social_account_id, external_post_id) WHERE external_post_id IS NOT NULL DO NOTHING
+		ON CONFLICT (user_id, link) DO NOTHING
 		RETURNING id, user_id, social_account_id, platform, link, original_text, description, tags, external_post_id, posted_at, created_at, updated_at
 	`, userID, socialAccountID, platform, link, originalText, externalPostID, postedAt).
 		Scan(&content.ID, &content.UserID, &content.SocialAccountID, &content.Platform, &content.Link,

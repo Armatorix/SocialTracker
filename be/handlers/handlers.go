@@ -274,6 +274,10 @@ func (h *Handler) CreateContent(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
 
+	if content == nil {
+		return c.JSON(http.StatusConflict, map[string]string{"error": "content with this link already exists"})
+	}
+
 	return c.JSON(http.StatusCreated, content)
 }
 
