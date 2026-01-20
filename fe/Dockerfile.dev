@@ -20,21 +20,14 @@ RUN npm install -g bun
 
 WORKDIR /app/
 
-COPY package.json bun.lockb ./
+COPY package.json bun.lock ./
 
 RUN bun i
 
 # COPY public public
 COPY src src
 
-COPY index.html \
-    tsconfig.json \
-    tsconfig.node.json \
-    vite.config.ts \
-    tailwind.config.cjs \
-    postcss.config.cjs \
-    public \
-    ./
+COPY . .
 
 COPY .env.localdev .env 
 
