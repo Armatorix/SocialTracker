@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/Armatorix/SocialTracker/be/handlers"
+	"github.com/Armatorix/SocialTracker/be/migrations"
 	"github.com/Armatorix/SocialTracker/be/repository"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -33,6 +34,12 @@ func main() {
 	}
 
 	log.Println("Connected to database successfully")
+
+	// Run migrations
+	if err := migrations.Run(db); err != nil {
+		log.Fatalf("Failed to run migrations: %v", err)
+	}
+	log.Println("Migrations completed successfully")
 
 	// Initialize repository and handlers
 	repo := repository.NewRepository(db)
