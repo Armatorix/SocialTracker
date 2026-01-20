@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"database/sql"
-	"log/slog"
 	"net/http"
 	"strconv"
 
@@ -21,35 +20,7 @@ func NewHandler(repo *repository.Repository) *Handler {
 
 // GetCurrentUser returns the current authenticated user
 func (h *Handler) GetCurrentUser(c echo.Context) error {
-	// Get user info from OAuth2 proxy headers
-	// oauth2-proxy with PASS_USER_HEADERS=true sends X-Forwarded-* headers
-	userID := c.Request().Header.Get("X-Forwarded-User")
-	email := c.Request().Header.Get("X-Forwarded-Email")
-	username := c.Request().Header.Get("X-Forwarded-Preferred-Username")
-
-	// Fallback to X-Auth-Request-* headers (for nginx auth_request setups)
-	if userID == "" {
-		userID = c.Request().Header.Get("X-Auth-Request-User")
-	}
-	if email == "" {
-		email = c.Request().Header.Get("X-Auth-Request-Email")
-	}
-	if username == "" {
-		username = c.Request().Header.Get("X-Auth-Request-Preferred-Username")
-	}
-
-	// If still no username, use email
-	if username == "" {
-		username = email
-	}
-
-	slog.Info("GetCurrentUser", "email", email, "userID", userID, "username", username)
-
-	if username == "" || email == "" || userID == "" {
-		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "missing user/email/userid"})
-	}
-	// Get or create user in database
-	user, err := h.repo.GetOrCreateUser(userID, email, username)
+	user, err := h.getCurrentUser(c)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
@@ -259,7 +230,6 @@ func (h *Handler) getCurrentUser(c echo.Context) (*models.User, error) {
 	if username == "" {
 		username = c.Request().Header.Get("X-Auth-Request-Preferred-Username")
 	}
-	
 
 	// Extract username from email if not provided separately
 	if idx := len(email); idx > 0 {
