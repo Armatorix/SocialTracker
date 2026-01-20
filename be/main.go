@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 
 	"github.com/Armatorix/SocialTracker/be/handlers"
 	"github.com/Armatorix/SocialTracker/be/migrations"
@@ -93,6 +94,32 @@ func main() {
 	// Admin routes
 	api.GET("/admin/content", h.GetAllContent)
 
+	fe := e.Group("", func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			c.Response().Header().Set(echo.HeaderCacheControl, "no-store, max-age=0")
+
+			return next(c)
+		}
+	})
+
+	staticPath := "/app/public"
+
+	err = filepath.Walk(staticPath,
+		func(path string, _ os.FileInfo, _ error) error {
+			routePath := path[len(staticPath):]
+			fe.GET(routePath, func(c echo.Context) error {
+				return c.File(path)
+			})
+
+			return nil
+		})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fe.Any("*", func(c echo.Context) error {
+		return c.File("/app/public/index.html")
+	})
 	// Start server
 	e.Logger.Fatal(e.Start(":8080"))
 }
