@@ -28,6 +28,8 @@ export interface Content {
   original_text?: string;
   description?: string;
   tags?: string[];
+  external_post_id?: string;
+  posted_at?: string;
   created_at: string;
   updated_at: string;
 }
@@ -52,4 +54,14 @@ export interface CreateContentRequest {
   original_text?: string;
   description?: string;
   tags?: string[];
+}
+
+export interface SyncResponse {
+  account_id: number;
+  platform: string;
+  account_name: string;
+  synced_count: number;
+  skipped_count: number;
+  errors?: string[];
+  message: string;
 }

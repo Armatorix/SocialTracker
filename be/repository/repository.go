@@ -117,10 +117,10 @@ func (r *Repository) CreateContent(userID int, req models.CreateContentRequest) 
 	err := r.db.QueryRow(`
 		INSERT INTO content (user_id, social_account_id, platform, link, original_text, description, tags)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
-		RETURNING id, user_id, social_account_id, platform, link, original_text, description, tags, created_at, updated_at
+		RETURNING id, user_id, social_account_id, platform, link, original_text, description, tags, external_post_id, posted_at, created_at, updated_at
 	`, userID, req.SocialAccountID, req.Platform, req.Link, req.OriginalText, req.Description, pq.Array(req.Tags)).
 		Scan(&content.ID, &content.UserID, &content.SocialAccountID, &content.Platform, &content.Link, 
-			&content.OriginalText, &content.Description, pq.Array(&content.Tags), &content.CreatedAt, &content.UpdatedAt)
+			&content.OriginalText, &content.Description, pq.Array(&content.Tags), &content.ExternalPostID, &content.PostedAt, &content.CreatedAt, &content.UpdatedAt)
 	
 	if err != nil {
 		return nil, err
@@ -130,9 +130,9 @@ func (r *Repository) CreateContent(userID int, req models.CreateContentRequest) 
 
 func (r *Repository) GetContentByUserID(userID int) ([]models.Content, error) {
 	rows, err := r.db.Query(`
-		SELECT id, user_id, social_account_id, platform, link, original_text, description, tags, created_at, updated_at
+		SELECT id, user_id, social_account_id, platform, link, original_text, description, tags, external_post_id, posted_at, created_at, updated_at
 		FROM content WHERE user_id = $1
-		ORDER BY created_at DESC
+		ORDER BY COALESCE(posted_at, created_at) DESC
 	`, userID)
 	if err != nil {
 		return nil, err
@@ -143,7 +143,7 @@ func (r *Repository) GetContentByUserID(userID int) ([]models.Content, error) {
 	for rows.Next() {
 		var content models.Content
 		err := rows.Scan(&content.ID, &content.UserID, &content.SocialAccountID, &content.Platform, &content.Link,
-			&content.OriginalText, &content.Description, pq.Array(&content.Tags), &content.CreatedAt, &content.UpdatedAt)
+			&content.OriginalText, &content.Description, pq.Array(&content.Tags), &content.ExternalPostID, &content.PostedAt, &content.CreatedAt, &content.UpdatedAt)
 		if err != nil {
 			return nil, err
 		}
@@ -155,7 +155,7 @@ func (r *Repository) GetContentByUserID(userID int) ([]models.Content, error) {
 func (r *Repository) GetAllContent(filters map[string]string) ([]models.ContentWithUser, error) {
 	query := `
 		SELECT c.id, c.user_id, c.social_account_id, c.platform, c.link, c.original_text, 
-		       c.description, c.tags, c.created_at, c.updated_at, u.username, u.email
+		       c.description, c.tags, c.external_post_id, c.posted_at, c.created_at, c.updated_at, u.username, u.email
 		FROM content c
 		JOIN users u ON c.user_id = u.id
 		WHERE 1=1
@@ -176,7 +176,7 @@ func (r *Repository) GetAllContent(filters map[string]string) ([]models.ContentW
 		argCount++
 	}
 	
-	query += " ORDER BY c.created_at DESC"
+	query += " ORDER BY COALESCE(c.posted_at, c.created_at) DESC"
 	
 	rows, err := r.db.Query(query, args...)
 	if err != nil {
@@ -188,7 +188,7 @@ func (r *Repository) GetAllContent(filters map[string]string) ([]models.ContentW
 	for rows.Next() {
 		var content models.ContentWithUser
 		err := rows.Scan(&content.ID, &content.UserID, &content.SocialAccountID, &content.Platform, &content.Link,
-			&content.OriginalText, &content.Description, pq.Array(&content.Tags), &content.CreatedAt, &content.UpdatedAt,
+			&content.OriginalText, &content.Description, pq.Array(&content.Tags), &content.ExternalPostID, &content.PostedAt, &content.CreatedAt, &content.UpdatedAt,
 			&content.Username, &content.Email)
 		if err != nil {
 			return nil, err
@@ -214,4 +214,71 @@ func (r *Repository) DeleteContent(contentID, userID int) error {
 		return sql.ErrNoRows
 	}
 	return nil
+}
+
+// GetSocialAccountByID retrieves a social account by ID and user ID
+func (r *Repository) GetSocialAccountByID(accountID, userID int) (*models.SocialAccount, error) {
+	var account models.SocialAccount
+	err := r.db.QueryRow(`
+		SELECT id, user_id, platform, account_name, account_id, access_token, refresh_token, token_expires_at, last_pull_at, created_at, updated_at
+		FROM social_accounts WHERE id = $1 AND user_id = $2
+	`, accountID, userID).Scan(
+		&account.ID, &account.UserID, &account.Platform, &account.AccountName, &account.AccountID,
+		&account.AccessToken, &account.RefreshToken, &account.TokenExpiresAt, &account.LastPullAt,
+		&account.CreatedAt, &account.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &account, nil
+}
+
+// UpdateSocialAccountID updates the account_id field (e.g., Twitter user ID)
+func (r *Repository) UpdateSocialAccountID(accountID int, externalID string) error {
+	_, err := r.db.Exec(`
+		UPDATE social_accounts SET account_id = $1, updated_at = CURRENT_TIMESTAMP
+		WHERE id = $2
+	`, externalID, accountID)
+	return err
+}
+
+// CreateSyncedContent inserts synced content with external post ID, skipping duplicates
+func (r *Repository) CreateSyncedContent(userID int, socialAccountID int, platform string, link string, originalText string, externalPostID string, postedAt time.Time) (*models.Content, error) {
+	var content models.Content
+	err := r.db.QueryRow(`
+		INSERT INTO content (user_id, social_account_id, platform, link, original_text, external_post_id, posted_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		ON CONFLICT (social_account_id, external_post_id) WHERE external_post_id IS NOT NULL DO NOTHING
+		RETURNING id, user_id, social_account_id, platform, link, original_text, description, tags, external_post_id, posted_at, created_at, updated_at
+	`, userID, socialAccountID, platform, link, originalText, externalPostID, postedAt).
+		Scan(&content.ID, &content.UserID, &content.SocialAccountID, &content.Platform, &content.Link,
+			&content.OriginalText, &content.Description, pq.Array(&content.Tags), &content.ExternalPostID, &content.PostedAt, &content.CreatedAt, &content.UpdatedAt)
+	
+	if err == sql.ErrNoRows {
+		// Duplicate, return nil without error
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &content, nil
+}
+
+// GetLatestExternalPostID returns the most recent external post ID for an account
+func (r *Repository) GetLatestExternalPostID(socialAccountID int) (*string, error) {
+	var externalID *string
+	err := r.db.QueryRow(`
+		SELECT external_post_id FROM content 
+		WHERE social_account_id = $1 AND external_post_id IS NOT NULL
+		ORDER BY posted_at DESC NULLS LAST, created_at DESC
+		LIMIT 1
+	`, socialAccountID).Scan(&externalID)
+	
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return externalID, nil
 }

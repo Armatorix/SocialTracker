@@ -3,20 +3,27 @@ package handlers
 import (
 	"database/sql"
 	"encoding/base64"
+	"log"
 	"net/http"
 	"strconv"
 
 	"github.com/Armatorix/SocialTracker/be/models"
 	"github.com/Armatorix/SocialTracker/be/repository"
+	"github.com/Armatorix/SocialTracker/be/twitter"
 	"github.com/labstack/echo/v4"
 )
 
 type Handler struct {
-	repo *repository.Repository
+	repo          *repository.Repository
+	twitterSyncer *twitter.Syncer
 }
 
 func NewHandler(repo *repository.Repository) *Handler {
-	return &Handler{repo: repo}
+	twitterClient := twitter.NewClient()
+	return &Handler{
+		repo:          repo,
+		twitterSyncer: twitter.NewSyncer(twitterClient),
+	}
 }
 
 // GetCurrentUser returns the current authenticated user
@@ -100,17 +107,110 @@ func (h *Handler) PullContentFromPlatform(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid account id"})
 	}
 
-	// Update last pull time
-	err = h.repo.UpdateSocialAccountLastPull(accountID, userID)
+	// Get the social account
+	account, err := h.repo.GetSocialAccountByID(accountID, userID)
+	if err == sql.ErrNoRows {
+		return c.JSON(http.StatusNotFound, map[string]string{"error": "account not found"})
+	}
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
 
-	// In a real implementation, this would call the actual social media APIs
-	// For now, we just update the last pull time
-	return c.JSON(http.StatusOK, map[string]string{
-		"message": "Content pull initiated. In production, this would fetch content from the platform API.",
-	})
+	var response models.SyncResponse
+	response.AccountID = accountID
+	response.Platform = account.Platform
+	response.AccountName = account.AccountName
+
+	switch account.Platform {
+	case "twitter":
+		response, err = h.syncTwitterAccount(userID, account)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		}
+	default:
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "auto-sync not supported for platform: " + account.Platform,
+		})
+	}
+
+	// Update last pull time
+	err = h.repo.UpdateSocialAccountLastPull(accountID, userID)
+	if err != nil {
+		log.Printf("Failed to update last pull time: %v", err)
+	}
+
+	return c.JSON(http.StatusOK, response)
+}
+
+// syncTwitterAccount syncs content from Twitter/X for the given account
+func (h *Handler) syncTwitterAccount(userID int, account *models.SocialAccount) (models.SyncResponse, error) {
+	response := models.SyncResponse{
+		AccountID:   account.ID,
+		Platform:    account.Platform,
+		AccountName: account.AccountName,
+	}
+
+	// Get the latest synced tweet ID to only fetch newer tweets
+	latestID, err := h.repo.GetLatestExternalPostID(account.ID)
+	if err != nil {
+		log.Printf("Failed to get latest external post ID: %v", err)
+	}
+
+	var sinceID string
+	if latestID != nil {
+		sinceID = *latestID
+	}
+
+	// Fetch tweets from Twitter
+	tweets, err := h.twitterSyncer.SyncAccount(account.AccountName, account.AccountID, sinceID)
+	if err != nil {
+		return response, err
+	}
+
+	// If we don't have the Twitter user ID stored, fetch and save it
+	if account.AccountID == nil || *account.AccountID == "" {
+		twitterUserID, err := h.twitterSyncer.GetTwitterUserID(account.AccountName)
+		if err != nil {
+			log.Printf("Failed to get Twitter user ID: %v", err)
+		} else {
+			err = h.repo.UpdateSocialAccountID(account.ID, twitterUserID)
+			if err != nil {
+				log.Printf("Failed to update social account ID: %v", err)
+			}
+		}
+	}
+
+	// Store each tweet as content
+	for _, tweet := range tweets {
+		content, err := h.repo.CreateSyncedContent(
+			userID,
+			account.ID,
+			"twitter",
+			tweet.Link,
+			tweet.Text,
+			tweet.ExternalID,
+			tweet.PostedAt,
+		)
+		if err != nil {
+			log.Printf("Failed to create content for tweet %s: %v", tweet.ExternalID, err)
+			response.Errors = append(response.Errors, err.Error())
+			continue
+		}
+		if content == nil {
+			// Duplicate tweet, already exists
+			response.SkippedCount++
+		} else {
+			response.SyncedCount++
+		}
+	}
+
+	response.Message = "Sync completed successfully"
+	if response.SyncedCount == 0 && response.SkippedCount == 0 {
+		response.Message = "No new tweets found"
+	}
+
+	log.Printf("Twitter sync for @%s: synced=%d, skipped=%d", account.AccountName, response.SyncedCount, response.SkippedCount)
+	return response, nil
 }
 
 // Content handlers

@@ -76,6 +76,9 @@ services:
     environment:
       - PORT=8080
       - DATABASE_URL=postgres://socialtracker:socialtracker@postgres:5432/socialtracker?sslmode=disable
+      # Twitter/X API Configuration for auto-sync
+      # Get your Bearer Token from https://developer.x.com/
+      - TWITTER_BEARER_TOKEN=${TWITTER_BEARER_TOKEN:-}
     develop:
       watch:
         - path: ./be

@@ -1,4 +1,4 @@
-import type { User, SocialAccount, Content, ContentWithUser, CreateSocialAccountRequest, CreateContentRequest } from './types';
+import type { User, SocialAccount, Content, ContentWithUser, CreateSocialAccountRequest, CreateContentRequest, SyncResponse } from './types';
 
 const API_BASE_URL = '/api';
 
@@ -47,7 +47,7 @@ export const api = {
     if (!res.ok) throw new Error('Failed to delete social account');
   },
 
-  pullContent: async (accountId: number): Promise<{ message: string }> => {
+  pullContent: async (accountId: number): Promise<SyncResponse> => {
     const res = await fetchWithCredentials(`${API_BASE_URL}/social-accounts/${accountId}/pull`, {
       method: 'POST',
     });

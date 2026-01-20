@@ -29,16 +29,18 @@ type SocialAccount struct {
 }
 
 type Content struct {
-	ID              int       `json:"id" db:"id"`
-	UserID          int       `json:"user_id" db:"user_id"`
-	SocialAccountID *int      `json:"social_account_id,omitempty" db:"social_account_id"`
-	Platform        string    `json:"platform" db:"platform"`
-	Link            string    `json:"link" db:"link"`
-	OriginalText    *string   `json:"original_text,omitempty" db:"original_text"`
-	Description     *string   `json:"description,omitempty" db:"description"`
-	Tags            []string  `json:"tags,omitempty" db:"tags"`
-	CreatedAt       time.Time `json:"created_at" db:"created_at"`
-	UpdatedAt       time.Time `json:"updated_at" db:"updated_at"`
+	ID              int        `json:"id" db:"id"`
+	UserID          int        `json:"user_id" db:"user_id"`
+	SocialAccountID *int       `json:"social_account_id,omitempty" db:"social_account_id"`
+	Platform        string     `json:"platform" db:"platform"`
+	Link            string     `json:"link" db:"link"`
+	OriginalText    *string    `json:"original_text,omitempty" db:"original_text"`
+	Description     *string    `json:"description,omitempty" db:"description"`
+	Tags            []string   `json:"tags,omitempty" db:"tags"`
+	ExternalPostID  *string    `json:"external_post_id,omitempty" db:"external_post_id"`
+	PostedAt        *time.Time `json:"posted_at,omitempty" db:"posted_at"`
+	CreatedAt       time.Time  `json:"created_at" db:"created_at"`
+	UpdatedAt       time.Time  `json:"updated_at" db:"updated_at"`
 }
 
 type CreateSocialAccountRequest struct {
@@ -62,4 +64,20 @@ type ContentWithUser struct {
 	Content
 	Username string `json:"username" db:"username"`
 	Email    string `json:"email" db:"email"`
+}
+
+// SyncRequest is used to request content sync from a platform
+type SyncRequest struct {
+	MaxResults int `json:"max_results"`
+}
+
+// SyncResponse contains the results of a sync operation
+type SyncResponse struct {
+	AccountID    int      `json:"account_id"`
+	Platform     string   `json:"platform"`
+	AccountName  string   `json:"account_name"`
+	SyncedCount  int      `json:"synced_count"`
+	SkippedCount int      `json:"skipped_count"`
+	Errors       []string `json:"errors,omitempty"`
+	Message      string   `json:"message"`
 }

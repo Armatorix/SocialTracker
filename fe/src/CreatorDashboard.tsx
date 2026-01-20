@@ -99,7 +99,17 @@ export function CreatorDashboard() {
   const handlePullContent = async (accountId: number) => {
     try {
       const result = await api.pullContent(accountId);
-      alert(result.message);
+      let message = result.message;
+      if (result.synced_count > 0 || result.skipped_count > 0) {
+        message = `Synced ${result.synced_count} new posts from @${result.account_name}`;
+        if (result.skipped_count > 0) {
+          message += ` (${result.skipped_count} duplicates skipped)`;
+        }
+      }
+      if (result.errors && result.errors.length > 0) {
+        message += `\n\nErrors: ${result.errors.join(', ')}`;
+      }
+      alert(message);
       loadData();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to pull content');
