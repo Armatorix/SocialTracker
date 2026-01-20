@@ -76,7 +76,7 @@ services:
       - 'localhost:host-gateway'
     environment:
       # Configuration for OAuth2 Proxy
-      - OAUTH2_PROXY_UPSTREAMS=http://app:8080/
+      - OAUTH2_PROXY_UPSTREAMS=http://fe:3000/
       - OAUTH2_PROXY_HTTP_ADDRESS=0.0.0.0:4180
 
       # Auth Provider Configuration (OIDC / Dex)
