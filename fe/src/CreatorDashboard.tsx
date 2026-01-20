@@ -54,17 +54,21 @@ export function CreatorDashboard() {
     description: '',
     tags: '',
   });
+  const [twitterOAuthConfigured, setTwitterOAuthConfigured] = useState(false);
+  const [connectingTwitter, setConnectingTwitter] = useState(false);
 
   const loadData = async () => {
     try {
       setLoading(true);
       setError('');
-      const [accountsData, contentData] = await Promise.all([
+      const [accountsData, contentData, twitterStatus] = await Promise.all([
         api.getSocialAccounts(),
         api.getContent(),
+        api.getTwitterOAuthStatus().catch(() => ({ configured: false })),
       ]);
       setSocialAccounts(accountsData);
       setContent(contentData);
+      setTwitterOAuthConfigured(twitterStatus.configured);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load data');
     } finally {
@@ -72,7 +76,31 @@ export function CreatorDashboard() {
     }
   };
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => { 
+    loadData();
+    
+    // Check for OAuth callback results
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('twitter_oauth_success') === 'true') {
+      // Clear the URL params and show success
+      window.history.replaceState({}, '', window.location.pathname);
+      loadData();
+    } else if (params.get('twitter_oauth_error')) {
+      const errorType = params.get('twitter_oauth_error');
+      window.history.replaceState({}, '', window.location.pathname);
+      setError(`Twitter connection failed: ${errorType}`);
+    }
+  }, []);
+
+  const handleConnectTwitter = async () => {
+    try {
+      setConnectingTwitter(true);
+      await api.connectTwitter();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to connect Twitter');
+      setConnectingTwitter(false);
+    }
+  };
 
   const handleAddAccount = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -199,16 +227,30 @@ export function CreatorDashboard() {
               <p className="text-sm text-slate-600">{socialAccounts.length} accounts linked</p>
             </div>
           </div>
-          <button
-            onClick={() => setShowAccountForm(!showAccountForm)}
-            className={`px-5 py-2.5 rounded-xl font-semibold transition-all ${
-              showAccountForm 
-                ? 'bg-slate-700 text-white border border-slate-600 hover:bg-slate-600' 
-                : 'bg-gradient-to-r from-purple-500 to-purple-700 text-white shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40'
-            }`}
-          >
-            {showAccountForm ? '✕ Cancel' : '+ Add Account'}
-          </button>
+          <div className="flex gap-2">
+            {twitterOAuthConfigured && (
+              <button
+                onClick={handleConnectTwitter}
+                disabled={connectingTwitter}
+                className="px-5 py-2.5 rounded-xl font-semibold transition-all bg-black text-white border border-slate-600 hover:bg-slate-900 flex items-center gap-2 disabled:opacity-50"
+              >
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                </svg>
+                {connectingTwitter ? 'Connecting...' : 'Connect with X'}
+              </button>
+            )}
+            <button
+              onClick={() => setShowAccountForm(!showAccountForm)}
+              className={`px-5 py-2.5 rounded-xl font-semibold transition-all ${
+                showAccountForm 
+                  ? 'bg-slate-700 text-white border border-slate-600 hover:bg-slate-600' 
+                  : 'bg-gradient-to-r from-purple-500 to-purple-700 text-white shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40'
+              }`}
+            >
+              {showAccountForm ? '✕ Cancel' : '+ Add Manually'}
+            </button>
+          </div>
         </div>
 
         {showAccountForm && (
@@ -282,11 +324,18 @@ export function CreatorDashboard() {
                     </svg>
                   </button>
                 </div>
-                <div className="flex items-center gap-2 text-xs text-slate-100 mb-4">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  Last synced: {formatDate(account.last_pull_at)}
+                <div className="flex items-center justify-between text-xs text-slate-100 mb-4">
+                  <div className="flex items-center gap-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Last synced: {formatDate(account.last_pull_at)}
+                  </div>
+                  {account.token_expires_at && (
+                    <span className="px-2 py-0.5 rounded-full bg-green-500/20 text-green-400 text-xs font-medium">
+                      OAuth
+                    </span>
+                  )}
                 </div>
                 <button
                   onClick={() => handlePullContent(account.id)}

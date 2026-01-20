@@ -14,6 +14,7 @@ export interface SocialAccount {
   platform: 'twitter' | 'facebook' | 'instagram' | 'youtube' | 'tiktok';
   account_name: string;
   account_id?: string;
+  token_expires_at?: string;
   last_pull_at?: string;
   created_at: string;
   updated_at: string;

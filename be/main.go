@@ -86,6 +86,11 @@ func main() {
 	api.DELETE("/social-accounts/:id", h.DeleteSocialAccount)
 	api.POST("/social-accounts/:id/pull", h.PullContentFromPlatform)
 
+	// Twitter OAuth routes
+	api.GET("/auth/twitter/status", h.GetTwitterOAuthStatus)
+	api.GET("/auth/twitter", h.GetTwitterOAuthURL)
+	api.GET("/auth/twitter/callback", h.HandleTwitterOAuthCallback)
+
 	// Content routes
 	api.GET("/content", h.GetContent)
 	api.POST("/content", h.CreateContent)

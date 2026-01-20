@@ -90,4 +90,25 @@ export const api = {
     if (!res.ok) throw new Error('Failed to fetch all content');
     return res.json();
   },
+
+  // Twitter OAuth
+  getTwitterOAuthStatus: async (): Promise<{ configured: boolean }> => {
+    const res = await fetchWithCredentials(`${API_BASE_URL}/auth/twitter/status`);
+    if (!res.ok) throw new Error('Failed to get Twitter OAuth status');
+    return res.json();
+  },
+
+  getTwitterOAuthURL: async (): Promise<{ url: string }> => {
+    const res = await fetchWithCredentials(`${API_BASE_URL}/auth/twitter`);
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.error || 'Failed to get Twitter OAuth URL');
+    }
+    return res.json();
+  },
+
+  connectTwitter: async (): Promise<void> => {
+    const { url } = await api.getTwitterOAuthURL();
+    window.location.href = url;
+  },
 };

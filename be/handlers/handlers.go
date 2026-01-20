@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/Armatorix/SocialTracker/be/models"
 	"github.com/Armatorix/SocialTracker/be/repository"
@@ -161,8 +162,43 @@ func (h *Handler) syncTwitterAccount(userID int, account *models.SocialAccount) 
 		sinceID = *latestID
 	}
 
-	// Fetch tweets from Twitter
-	tweets, err := h.twitterSyncer.SyncAccount(account.AccountName, account.AccountID, sinceID)
+	var tweets []twitter.SyncedTweet
+
+	// Check if we have OAuth tokens - prefer OAuth over app-level token
+	if account.AccessToken != nil && *account.AccessToken != "" {
+		// Check if token needs refresh
+		if account.TokenExpiresAt != nil && time.Now().After(*account.TokenExpiresAt) {
+			if account.RefreshToken != nil && *account.RefreshToken != "" {
+				// Try to refresh the token
+				oauthHandler := h.twitterSyncer.GetOAuthHandler()
+				newTokens, err := oauthHandler.RefreshAccessToken(*account.RefreshToken)
+				if err != nil {
+					log.Printf("Failed to refresh token for account %d: %v", account.ID, err)
+					// Fall back to app-level token if refresh fails
+					goto useAppToken
+				}
+				// Update tokens in database
+				expiresAt := time.Now().Add(time.Duration(newTokens.ExpiresIn) * time.Second)
+				err = h.repo.UpdateSocialAccountTokens(account.ID, newTokens.AccessToken, newTokens.RefreshToken, expiresAt)
+				if err != nil {
+					log.Printf("Failed to update tokens: %v", err)
+				}
+				account.AccessToken = &newTokens.AccessToken
+			}
+		}
+
+		// Use OAuth to sync
+		tweets, err = h.twitterSyncer.SyncAccountWithOAuth(*account.AccessToken, account.AccountName, account.AccountID, sinceID)
+		if err != nil {
+			log.Printf("OAuth sync failed, falling back to app token: %v", err)
+			goto useAppToken
+		}
+		goto processTweets
+	}
+
+useAppToken:
+	// Fetch tweets from Twitter using app-level token
+	tweets, err = h.twitterSyncer.SyncAccount(account.AccountName, account.AccountID, sinceID)
 	if err != nil {
 		return response, err
 	}
@@ -180,6 +216,7 @@ func (h *Handler) syncTwitterAccount(userID int, account *models.SocialAccount) 
 		}
 	}
 
+processTweets:
 	// Store each tweet as content
 	for _, tweet := range tweets {
 		content, err := h.repo.CreateSyncedContent(
@@ -304,6 +341,111 @@ func (h *Handler) GetAllContent(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, content)
+}
+
+// Twitter OAuth handlers
+
+// GetTwitterOAuthURL initiates the Twitter OAuth flow
+func (h *Handler) GetTwitterOAuthURL(c echo.Context) error {
+	userID, err := h.getUserID(c)
+	if err != nil {
+		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+	}
+
+	oauthHandler := h.twitterSyncer.GetOAuthHandler()
+	if !oauthHandler.IsConfigured() {
+		return c.JSON(http.StatusServiceUnavailable, map[string]string{
+			"error": "Twitter OAuth is not configured. Please set TWITTER_CLIENT_ID, TWITTER_CLIENT_SECRET, and TWITTER_REDIRECT_URI environment variables.",
+		})
+	}
+
+	authURL, err := oauthHandler.GetAuthorizationURL(userID)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, map[string]string{"url": authURL})
+}
+
+// HandleTwitterOAuthCallback handles the OAuth callback from Twitter
+func (h *Handler) HandleTwitterOAuthCallback(c echo.Context) error {
+	code := c.QueryParam("code")
+	state := c.QueryParam("state")
+	errorParam := c.QueryParam("error")
+
+	// Handle OAuth errors
+	if errorParam != "" {
+		errorDesc := c.QueryParam("error_description")
+		log.Printf("Twitter OAuth error: %s - %s", errorParam, errorDesc)
+		// Redirect to frontend with error
+		return c.Redirect(http.StatusTemporaryRedirect, "/?twitter_oauth_error="+errorParam)
+	}
+
+	if code == "" || state == "" {
+		return c.Redirect(http.StatusTemporaryRedirect, "/?twitter_oauth_error=missing_params")
+	}
+
+	oauthHandler := h.twitterSyncer.GetOAuthHandler()
+
+	// Exchange code for tokens
+	tokens, userID, err := oauthHandler.ExchangeCode(code, state)
+	if err != nil {
+		log.Printf("Failed to exchange OAuth code: %v", err)
+		return c.Redirect(http.StatusTemporaryRedirect, "/?twitter_oauth_error=token_exchange_failed")
+	}
+
+	// Get the authenticated Twitter user
+	twitterUser, err := oauthHandler.GetAuthenticatedUser(tokens.AccessToken)
+	if err != nil {
+		log.Printf("Failed to get Twitter user: %v", err)
+		return c.Redirect(http.StatusTemporaryRedirect, "/?twitter_oauth_error=user_fetch_failed")
+	}
+
+	// Calculate token expiration
+	expiresAt := time.Now().Add(time.Duration(tokens.ExpiresIn) * time.Second)
+
+	// Create or update the social account
+	req := models.CreateSocialAccountRequest{
+		Platform:     "twitter",
+		AccountName:  twitterUser.Data.Username,
+		AccountID:    &twitterUser.Data.ID,
+		AccessToken:  &tokens.AccessToken,
+		RefreshToken: &tokens.RefreshToken,
+	}
+
+	// Check if account already exists
+	existingAccount, err := h.repo.GetSocialAccountByPlatformAndAccountID(userID, "twitter", twitterUser.Data.ID)
+	if err != nil && err != sql.ErrNoRows {
+		log.Printf("Failed to check existing account: %v", err)
+	}
+
+	if existingAccount != nil {
+		// Update existing account with new tokens
+		err = h.repo.UpdateSocialAccountTokens(existingAccount.ID, tokens.AccessToken, tokens.RefreshToken, expiresAt)
+		if err != nil {
+			log.Printf("Failed to update account tokens: %v", err)
+			return c.Redirect(http.StatusTemporaryRedirect, "/?twitter_oauth_error=save_failed")
+		}
+	} else {
+		// Create new account
+		account, err := h.repo.CreateSocialAccountWithTokens(userID, req, expiresAt)
+		if err != nil {
+			log.Printf("Failed to create social account: %v", err)
+			return c.Redirect(http.StatusTemporaryRedirect, "/?twitter_oauth_error=save_failed")
+		}
+		log.Printf("Created Twitter account for user %d: @%s (ID: %s)", userID, account.AccountName, twitterUser.Data.ID)
+	}
+
+	// Redirect to frontend with success
+	return c.Redirect(http.StatusTemporaryRedirect, "/?twitter_oauth_success=true")
+}
+
+// GetTwitterOAuthStatus returns whether Twitter OAuth is configured
+func (h *Handler) GetTwitterOAuthStatus(c echo.Context) error {
+	oauthHandler := h.twitterSyncer.GetOAuthHandler()
+	return c.JSON(http.StatusOK, map[string]bool{
+		"configured": oauthHandler.IsConfigured(),
+	})
 }
 
 // Helper methods

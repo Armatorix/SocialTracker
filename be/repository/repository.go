@@ -233,6 +233,23 @@ func (r *Repository) GetSocialAccountByID(accountID, userID int) (*models.Social
 	return &account, nil
 }
 
+// GetSocialAccountByPlatformAndAccountID finds an account by platform and external account ID
+func (r *Repository) GetSocialAccountByPlatformAndAccountID(userID int, platform string, accountID string) (*models.SocialAccount, error) {
+	var account models.SocialAccount
+	err := r.db.QueryRow(`
+		SELECT id, user_id, platform, account_name, account_id, access_token, refresh_token, token_expires_at, last_pull_at, created_at, updated_at
+		FROM social_accounts WHERE user_id = $1 AND platform = $2 AND account_id = $3
+	`, userID, platform, accountID).Scan(
+		&account.ID, &account.UserID, &account.Platform, &account.AccountName, &account.AccountID,
+		&account.AccessToken, &account.RefreshToken, &account.TokenExpiresAt, &account.LastPullAt,
+		&account.CreatedAt, &account.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &account, nil
+}
+
 // UpdateSocialAccountID updates the account_id field (e.g., Twitter user ID)
 func (r *Repository) UpdateSocialAccountID(accountID int, externalID string) error {
 	_, err := r.db.Exec(`
@@ -240,6 +257,32 @@ func (r *Repository) UpdateSocialAccountID(accountID int, externalID string) err
 		WHERE id = $2
 	`, externalID, accountID)
 	return err
+}
+
+// UpdateSocialAccountTokens updates the OAuth tokens for a social account
+func (r *Repository) UpdateSocialAccountTokens(accountID int, accessToken string, refreshToken string, expiresAt time.Time) error {
+	_, err := r.db.Exec(`
+		UPDATE social_accounts 
+		SET access_token = $1, refresh_token = $2, token_expires_at = $3, updated_at = CURRENT_TIMESTAMP
+		WHERE id = $4
+	`, accessToken, refreshToken, expiresAt, accountID)
+	return err
+}
+
+// CreateSocialAccountWithTokens creates a social account with OAuth tokens
+func (r *Repository) CreateSocialAccountWithTokens(userID int, req models.CreateSocialAccountRequest, tokenExpiresAt time.Time) (*models.SocialAccount, error) {
+	var account models.SocialAccount
+	err := r.db.QueryRow(`
+		INSERT INTO social_accounts (user_id, platform, account_name, account_id, access_token, refresh_token, token_expires_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		RETURNING id, user_id, platform, account_name, account_id, last_pull_at, created_at, updated_at
+	`, userID, req.Platform, req.AccountName, req.AccountID, req.AccessToken, req.RefreshToken, tokenExpiresAt).
+		Scan(&account.ID, &account.UserID, &account.Platform, &account.AccountName, &account.AccountID, &account.LastPullAt, &account.CreatedAt, &account.UpdatedAt)
+	
+	if err != nil {
+		return nil, err
+	}
+	return &account, nil
 }
 
 // CreateSyncedContent inserts synced content with external post ID, skipping duplicates
