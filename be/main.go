@@ -50,7 +50,22 @@ func main() {
 	// Middleware
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
-	e.Use(middleware.CORS())
+	e.Use(middleware.CORSWithConfig(
+		middleware.CORSConfig{
+			AllowOrigins: []string{
+				"http://localhost:5173",
+			},
+			AllowHeaders: []string{
+				echo.HeaderAccept,
+				echo.HeaderOrigin,
+				echo.HeaderContentType,
+				echo.HeaderAuthorization,
+				echo.HeaderAccessControlAllowOrigin,
+			},
+			AllowCredentials: true,
+		},
+	),
+	)
 
 	// Health check
 	e.GET("/health", func(c echo.Context) error {
@@ -59,21 +74,21 @@ func main() {
 
 	// API routes
 	api := e.Group("/api")
-	
+
 	// User routes
 	api.GET("/user", h.GetCurrentUser)
-	
+
 	// Social accounts routes
 	api.GET("/social-accounts", h.GetSocialAccounts)
 	api.POST("/social-accounts", h.CreateSocialAccount)
 	api.DELETE("/social-accounts/:id", h.DeleteSocialAccount)
 	api.POST("/social-accounts/:id/pull", h.PullContentFromPlatform)
-	
+
 	// Content routes
 	api.GET("/content", h.GetContent)
 	api.POST("/content", h.CreateContent)
 	api.DELETE("/content/:id", h.DeleteContent)
-	
+
 	// Admin routes
 	api.GET("/admin/content", h.GetAllContent)
 
