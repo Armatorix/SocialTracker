@@ -554,7 +554,7 @@ function CreatorContent({
               </svg>
             </div>
             <div>
-              <h2 className="text-xl font-bold text-white">Connected Accounts</h2>
+              <h2 className="text-xl font-bold text-black">Connected Accounts</h2>
               <p className="text-sm text-slate-600">{socialAccounts.length} accounts linked</p>
             </div>
           </div>
@@ -673,8 +673,8 @@ function CreatorContent({
               </svg>
             </div>
             <div>
-              <h2 className="text-xl font-bold text-white">My Content</h2>
-              <p className="text-sm text-slate-100">{myContent.length} items tracked</p>
+              <h2 className="text-xl font-bold text-black">My Content</h2>
+              <p className="text-sm text-slate-700">{myContent.length} items tracked</p>
             </div>
           </div>
           <button
