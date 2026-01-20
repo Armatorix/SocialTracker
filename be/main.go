@@ -2,10 +2,6 @@ package main
 
 import (
 	"database/sql"
-	"embed"
-	"html/template"
-	"io"
-	"io/fs"
 	"log"
 	"net/http"
 	"os"
@@ -14,20 +10,6 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 	_ "github.com/lib/pq"
 )
-
-var templateFS embed.FS
-
-var staticFS embed.FS
-
-// TemplateRenderer is a custom html/template renderer for Echo
-type TemplateRenderer struct {
-	templates *template.Template
-}
-
-// Render renders a template document
-func (t *TemplateRenderer) Render(w io.Writer, name string, data any, c echo.Context) error {
-	return t.templates.ExecuteTemplate(w, name, data)
-}
 
 func main() {
 	// Get database URL from environment
@@ -56,17 +38,6 @@ func main() {
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 	e.Use(middleware.CORS())
-
-	// Parse templates
-	tmpl := template.Must(template.ParseFS(templateFS, "templates/*.html"))
-	e.Renderer = &TemplateRenderer{templates: tmpl}
-
-	// Serve static files from embedded filesystem
-	staticSubFS, err := fs.Sub(staticFS, "static")
-	if err != nil {
-		log.Fatalf("Failed to create static sub filesystem: %v", err)
-	}
-	e.GET("/static/*", echo.WrapHandler(http.StripPrefix("/static/", http.FileServer(http.FS(staticSubFS)))))
 
 	// Health check
 	e.GET("/health", func(c echo.Context) error {
