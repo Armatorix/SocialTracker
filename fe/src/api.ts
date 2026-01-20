@@ -2,23 +2,31 @@ import type { User, SocialAccount, Content, ContentWithUser, CreateSocialAccount
 
 const API_BASE_URL = '/api';
 
+// Helper to make fetch requests with credentials included
+const fetchWithCredentials = (url: string, options: RequestInit = {}): Promise<Response> => {
+  return fetch(url, {
+    ...options,
+    credentials: 'include',
+  });
+};
+
 export const api = {
   // User
   getCurrentUser: async (): Promise<User> => {
-    const res = await fetch(`${API_BASE_URL}/user`);
+    const res = await fetchWithCredentials(`${API_BASE_URL}/user`);
     if (!res.ok) throw new Error('Failed to fetch user');
     return res.json();
   },
 
   // Social Accounts
   getSocialAccounts: async (): Promise<SocialAccount[]> => {
-    const res = await fetch(`${API_BASE_URL}/social-accounts`);
+    const res = await fetchWithCredentials(`${API_BASE_URL}/social-accounts`);
     if (!res.ok) throw new Error('Failed to fetch social accounts');
     return res.json();
   },
 
   createSocialAccount: async (data: CreateSocialAccountRequest): Promise<SocialAccount> => {
-    const res = await fetch(`${API_BASE_URL}/social-accounts`, {
+    const res = await fetchWithCredentials(`${API_BASE_URL}/social-accounts`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -28,14 +36,14 @@ export const api = {
   },
 
   deleteSocialAccount: async (id: number): Promise<void> => {
-    const res = await fetch(`${API_BASE_URL}/social-accounts/${id}`, {
+    const res = await fetchWithCredentials(`${API_BASE_URL}/social-accounts/${id}`, {
       method: 'DELETE',
     });
     if (!res.ok) throw new Error('Failed to delete social account');
   },
 
   pullContent: async (accountId: number): Promise<{ message: string }> => {
-    const res = await fetch(`${API_BASE_URL}/social-accounts/${accountId}/pull`, {
+    const res = await fetchWithCredentials(`${API_BASE_URL}/social-accounts/${accountId}/pull`, {
       method: 'POST',
     });
     if (!res.ok) throw new Error('Failed to pull content');
@@ -44,13 +52,13 @@ export const api = {
 
   // Content
   getContent: async (): Promise<Content[]> => {
-    const res = await fetch(`${API_BASE_URL}/content`);
+    const res = await fetchWithCredentials(`${API_BASE_URL}/content`);
     if (!res.ok) throw new Error('Failed to fetch content');
     return res.json();
   },
 
   createContent: async (data: CreateContentRequest): Promise<Content> => {
-    const res = await fetch(`${API_BASE_URL}/content`, {
+    const res = await fetchWithCredentials(`${API_BASE_URL}/content`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -60,7 +68,7 @@ export const api = {
   },
 
   deleteContent: async (id: number): Promise<void> => {
-    const res = await fetch(`${API_BASE_URL}/content/${id}`, {
+    const res = await fetchWithCredentials(`${API_BASE_URL}/content/${id}`, {
       method: 'DELETE',
     });
     if (!res.ok) throw new Error('Failed to delete content');
@@ -73,7 +81,7 @@ export const api = {
     if (filters?.username) params.append('username', filters.username);
     
     const url = `${API_BASE_URL}/admin/content${params.toString() ? '?' + params.toString() : ''}`;
-    const res = await fetch(url);
+    const res = await fetchWithCredentials(url);
     if (!res.ok) throw new Error('Failed to fetch all content');
     return res.json();
   },

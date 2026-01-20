@@ -21,10 +21,27 @@ func NewHandler(repo *repository.Repository) *Handler {
 
 // GetCurrentUser returns the current authenticated user
 func (h *Handler) GetCurrentUser(c echo.Context) error {
-	// Get user info from OAuth2 headers
-	userID := c.Request().Header.Get("X-Auth-Request-User")
-	email := c.Request().Header.Get("X-Auth-Request-Email")
-	username := email
+	// Get user info from OAuth2 proxy headers
+	// oauth2-proxy with PASS_USER_HEADERS=true sends X-Forwarded-* headers
+	userID := c.Request().Header.Get("X-Forwarded-User")
+	email := c.Request().Header.Get("X-Forwarded-Email")
+	username := c.Request().Header.Get("X-Forwarded-Preferred-Username")
+
+	// Fallback to X-Auth-Request-* headers (for nginx auth_request setups)
+	if userID == "" {
+		userID = c.Request().Header.Get("X-Auth-Request-User")
+	}
+	if email == "" {
+		email = c.Request().Header.Get("X-Auth-Request-Email")
+	}
+	if username == "" {
+		username = c.Request().Header.Get("X-Auth-Request-Preferred-Username")
+	}
+
+	// If still no username, use email
+	if username == "" {
+		username = email
+	}
 
 	slog.Info("GetCurrentUser", "email", email, "userID", userID, "username", username)
 
@@ -227,8 +244,17 @@ func (h *Handler) getUserID(c echo.Context) (int, error) {
 }
 
 func (h *Handler) getCurrentUser(c echo.Context) (*models.User, error) {
-	userID := c.Request().Header.Get("X-Auth-Request-User")
-	email := c.Request().Header.Get("X-Auth-Request-Email")
+	// oauth2-proxy with PASS_USER_HEADERS=true sends X-Forwarded-* headers
+	userID := c.Request().Header.Get("X-Forwarded-User")
+	email := c.Request().Header.Get("X-Forwarded-Email")
+
+	// Fallback to X-Auth-Request-* headers
+	if userID == "" {
+		userID = c.Request().Header.Get("X-Auth-Request-User")
+	}
+	if email == "" {
+		email = c.Request().Header.Get("X-Auth-Request-Email")
+	}
 
 	if userID == "" {
 		userID = "admin-001" // Default for testing
