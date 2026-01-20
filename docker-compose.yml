@@ -22,53 +22,6 @@ services:
       PGWEB_DATABASE_URL: postgres://socialtracker:socialtracker@postgres:5432/socialtracker?sslmode=disable
     restart: on-failure
 
-  be:
-    build:
-      context: ./be/
-      dockerfile: ./Dockerfile.dev
-    container_name: socialtracker-be
-    restart: unless-stopped
-    env_file:
-      - ./be/.env
-    environment:
-      - PORT=8080
-      - DATABASE_URL=postgres://socialtracker:socialtracker@postgres:5432/socialtracker?sslmode=disable
-    ports:
-      - '8080:8080'
-    depends_on:
-      - postgres
-    profiles:
-      - localdev
-    develop:
-      watch:
-        - path: ./
-          action: rebuild
-          target: /be
-
-  fe:
-    build:
-      context: ./fe
-      dockerfile: Dockerfile.dev
-    restart: on-failure
-    container_name: socialtracker-fe
-    environment:
-      VITE_BACKEND_API: http://localhost:8080
-      VITE_USE_FS_ACCESS_API: 'false'
-    ports:
-      - '5173:3000'
-    develop:
-      watch:
-        - path: ./fe
-          action: sync
-          target: /app
-          ignore:
-            - node_modules
-            - package.json
-            - bun.lockb
-        - path: ./fe/package.json
-          action: rebuild
-    profiles:
-      - localdev
   oauth2-proxy:
     image: quay.io/oauth2-proxy/oauth2-proxy:v7.5.1
     container_name: socialtracker-oauth2-proxy
@@ -79,7 +32,7 @@ services:
       - 'localhost:host-gateway'
     environment:
       # Configuration for OAuth2 Proxy
-      - OAUTH2_PROXY_UPSTREAMS=http://fe:3000/
+      - OAUTH2_PROXY_UPSTREAMS=http://befe:8080
       - OAUTH2_PROXY_HTTP_ADDRESS=0.0.0.0:4180
 
       # Auth Provider Configuration (OIDC / Dex)
@@ -97,9 +50,11 @@ services:
       # Headers Configuration
       - OAUTH2_PROXY_PASS_USER_HEADERS=true
       - OAUTH2_PROXY_SET_XAUTHREQUEST=true
+      - OAUTH2_PROXY_PASS_ACCESS_TOKEN=true
 
     depends_on:
       - dex
+      - befe
 
   dex:
     image: ghcr.io/dexidp/dex:v2.38.0

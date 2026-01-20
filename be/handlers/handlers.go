@@ -26,7 +26,7 @@ func (h *Handler) GetCurrentUser(c echo.Context) error {
 	email := c.Request().Header.Get("X-Auth-Request-Email")
 	username := email
 
-	slog.Info(email, userID, username, c.Request().Header)
+	slog.Info("GetCurrentUser", "email", email, "userID", userID, "username", username)
 
 	if username == "" || email == "" || userID == "" {
 		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "missing user/email/userid"})
