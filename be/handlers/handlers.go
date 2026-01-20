@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"database/sql"
+	"encoding/base64"
 	"net/http"
 	"strconv"
 
@@ -223,6 +224,11 @@ func (h *Handler) getCurrentUser(c echo.Context) (*models.User, error) {
 	// Fallback to X-Auth-Request-* headers (for nginx auth_request setups)
 	if userID == "" {
 		userID = c.Request().Header.Get("X-Auth-Request-User")
+	}
+	// attempt to decode userId
+	nUserId, err := base64.RawStdEncoding.DecodeString(userID)
+	if err == nil && len(nUserId) > 0 {
+		userID = string(nUserId)
 	}
 	if email == "" {
 		email = c.Request().Header.Get("X-Auth-Request-Email")
