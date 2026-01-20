@@ -10,7 +10,7 @@ function LoadingSpinner() {
     <div className="min-h-screen flex items-center justify-center">
       <div className="flex flex-col items-center gap-4">
         <div className="w-12 h-12 border-4 border-purple-500/30 border-t-purple-500 rounded-full animate-spin" />
-        <p className="text-slate-400 text-sm">Loading...</p>
+        <p className="text-slate-300 text-sm">Loading...</p>
       </div>
     </div>
   );
@@ -61,7 +61,7 @@ export function App() {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
         <div className="bg-slate-800/50 backdrop-blur-xl rounded-2xl p-8 text-center border border-slate-700">
-          <p className="text-slate-400">No user found</p>
+          <p className="text-slate-300">No user found</p>
         </div>
       </div>
     );
@@ -95,7 +95,7 @@ export function App() {
               </div>
               <button
                 onClick={() => api.logout()}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800/50 border border-slate-700/50 hover:bg-red-500/20 hover:border-red-500/50 transition-all duration-200 text-slate-400 hover:text-red-400"
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500/10 border border-red-500/30 hover:bg-red-500/20 hover:border-red-500/50 transition-all duration-200 text-red-400 hover:text-red-300"
                 title="Logout"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -114,7 +114,7 @@ export function App() {
       </main>
       
       {/* Footer */}
-      <footer className="py-6 text-center text-slate-500 text-sm border-t border-slate-800">
+      <footer className="py-6 text-center text-slate-100 text-sm border-t border-slate-800">
         <p>© 2026 Social Tracker. Track your content everywhere.</p>
       </footer>
     </div>

@@ -154,7 +154,7 @@ export function CreatorDashboard() {
         <h1 className="text-3xl sm:text-4xl font-bold mb-2 bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent">
           Creator Dashboard
         </h1>
-        <p className="text-slate-400">Manage your social accounts and track your content</p>
+        <p className="text-slate-300">Manage your social accounts and track your content</p>
       </div>
       
       {error && (
@@ -186,7 +186,7 @@ export function CreatorDashboard() {
             </div>
             <div>
               <h2 className="text-xl font-bold text-white">Connected Accounts</h2>
-              <p className="text-sm text-slate-500">{socialAccounts.length} accounts linked</p>
+              <p className="text-sm text-slate-100">{socialAccounts.length} accounts linked</p>
             </div>
           </div>
           <button
@@ -206,7 +206,7 @@ export function CreatorDashboard() {
             <h3 className="text-lg font-semibold mb-4 text-white">Link New Account</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-400 mb-2">Platform</label>
+                <label className="block text-sm font-medium text-slate-100 mb-2">Platform</label>
                 <select
                   value={accountForm.platform}
                   onChange={(e) => setAccountForm({ ...accountForm, platform: e.target.value })}
@@ -221,7 +221,7 @@ export function CreatorDashboard() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-400 mb-2">Account Name</label>
+                <label className="block text-sm font-medium text-slate-100 mb-2">Account Name</label>
                 <input
                   type="text"
                   value={accountForm.account_name}
@@ -246,8 +246,8 @@ export function CreatorDashboard() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
                 </svg>
               </div>
-              <p className="text-slate-400 mb-2">No accounts connected yet</p>
-              <p className="text-sm text-slate-500">Click "Add Account" to link your social media profiles</p>
+              <p className="text-slate-300 mb-2">No accounts connected yet</p>
+              <p className="text-sm text-slate-100">Click "Add Account" to link your social media profiles</p>
             </div>
           ) : (
             socialAccounts.map((account) => (
@@ -259,7 +259,7 @@ export function CreatorDashboard() {
                     </div>
                     <div>
                       <h3 className="font-bold capitalize text-white">{account.platform}</h3>
-                      <p className="text-sm text-slate-400">{account.account_name}</p>
+                      <p className="text-sm text-slate-100">{account.account_name}</p>
                     </div>
                   </div>
                   <button
@@ -272,7 +272,7 @@ export function CreatorDashboard() {
                     </svg>
                   </button>
                 </div>
-                <div className="flex items-center gap-2 text-xs text-slate-500 mb-4">
+                <div className="flex items-center gap-2 text-xs text-slate-100 mb-4">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
@@ -304,7 +304,7 @@ export function CreatorDashboard() {
             </div>
             <div>
               <h2 className="text-xl font-bold text-white">My Content</h2>
-              <p className="text-sm text-slate-500">{content.length} items tracked</p>
+              <p className="text-sm text-slate-100">{content.length} items tracked</p>
             </div>
           </div>
           <button
@@ -324,7 +324,7 @@ export function CreatorDashboard() {
             <h3 className="text-lg font-semibold mb-4 text-white">Add New Content</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div>
-                <label className="block text-sm font-medium text-slate-400 mb-2">Platform</label>
+                <label className="block text-sm font-medium text-slate-100 mb-2">Platform</label>
                 <select
                   value={contentForm.platform}
                   onChange={(e) => setContentForm({ ...contentForm, platform: e.target.value })}
@@ -339,7 +339,7 @@ export function CreatorDashboard() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-400 mb-2">Link (URL) *</label>
+                <label className="block text-sm font-medium text-slate-100 mb-2">Link (URL) *</label>
                 <input
                   type="url"
                   value={contentForm.link}
@@ -351,7 +351,7 @@ export function CreatorDashboard() {
               </div>
             </div>
             <div className="mb-4">
-              <label className="block text-sm font-medium text-slate-400 mb-2">Original Text/Caption</label>
+              <label className="block text-sm font-medium text-slate-100 mb-2">Original Text/Caption</label>
               <textarea
                 value={contentForm.original_text}
                 onChange={(e) => setContentForm({ ...contentForm, original_text: e.target.value })}
@@ -361,7 +361,7 @@ export function CreatorDashboard() {
               />
             </div>
             <div className="mb-4">
-              <label className="block text-sm font-medium text-slate-400 mb-2">Short Description</label>
+              <label className="block text-sm font-medium text-slate-100 mb-2">Short Description</label>
               <textarea
                 value={contentForm.description}
                 onChange={(e) => setContentForm({ ...contentForm, description: e.target.value })}
@@ -371,7 +371,7 @@ export function CreatorDashboard() {
               />
             </div>
             <div className="mb-4">
-              <label className="block text-sm font-medium text-slate-400 mb-2">Tags (comma-separated)</label>
+              <label className="block text-sm font-medium text-slate-100 mb-2">Tags (comma-separated)</label>
               <input
                 type="text"
                 value={contentForm.tags}
@@ -394,8 +394,8 @@ export function CreatorDashboard() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                 </svg>
               </div>
-              <p className="text-slate-400 mb-2">No content yet</p>
-              <p className="text-sm text-slate-500">Add content manually or sync from your connected accounts</p>
+              <p className="text-slate-300 mb-2">No content yet</p>
+              <p className="text-sm text-slate-100">Add content manually or sync from your connected accounts</p>
             </div>
           ) : (
             content.map((item) => (
@@ -406,7 +406,7 @@ export function CreatorDashboard() {
                       <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold text-white ${platformStyles[item.platform] || 'bg-slate-600'}`}>
                         {item.platform}
                       </span>
-                      <span className="text-xs text-slate-500 flex items-center gap-1">
+                      <span className="text-xs text-slate-100 flex items-center gap-1">
                         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
@@ -425,7 +425,7 @@ export function CreatorDashboard() {
                       <p className="text-sm text-slate-300 mb-2">{item.description}</p>
                     )}
                     {item.original_text && (
-                      <p className="text-sm text-slate-500 mb-2 italic line-clamp-2">"{item.original_text}"</p>
+                      <p className="text-sm text-slate-100 mb-2 italic line-clamp-2">"{item.original_text}"</p>
                     )}
                     {item.tags && item.tags.length > 0 && (
                       <div className="flex flex-wrap gap-2 mt-3">

@@ -48,7 +48,7 @@ export function AdminDashboard() {
         <h1 className="text-3xl sm:text-4xl font-bold mb-2 bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent">
           Admin Dashboard
         </h1>
-        <p className="text-slate-400">Monitor and manage all content across the platform</p>
+        <p className="text-slate-300">Monitor and manage all content across the platform</p>
       </div>
       
       {/* Stats Cards */}
@@ -62,7 +62,7 @@ export function AdminDashboard() {
             </div>
             <div>
               <p className="text-3xl font-bold text-white">{content.length}</p>
-              <p className="text-slate-400 text-sm">Total Content</p>
+              <p className="text-slate-300 text-sm">Total Content</p>
             </div>
           </div>
         </div>
@@ -75,7 +75,7 @@ export function AdminDashboard() {
             </div>
             <div>
               <p className="text-3xl font-bold text-white">{new Set(content.map(c => c.username)).size}</p>
-              <p className="text-slate-400 text-sm">Creators</p>
+              <p className="text-slate-300 text-sm">Creators</p>
             </div>
           </div>
         </div>
@@ -88,7 +88,7 @@ export function AdminDashboard() {
             </div>
             <div>
               <p className="text-3xl font-bold text-white">{new Set(content.map(c => c.platform)).size}</p>
-              <p className="text-slate-400 text-sm">Platforms</p>
+              <p className="text-slate-300 text-sm">Platforms</p>
             </div>
           </div>
         </div>
@@ -104,7 +104,7 @@ export function AdminDashboard() {
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-slate-400 mb-2">Platform</label>
+            <label className="block text-sm font-medium text-slate-100 mb-2">Platform</label>
             <select
               value={platformFilter}
               onChange={(e) => setPlatformFilter(e.target.value)}
@@ -120,7 +120,7 @@ export function AdminDashboard() {
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-slate-400 mb-2">Username</label>
+            <label className="block text-sm font-medium text-slate-100 mb-2">Username</label>
             <div className="relative">
               <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -175,7 +175,7 @@ export function AdminDashboard() {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
                           </svg>
                         </div>
-                        <p className="text-slate-500">No content found</p>
+                        <p className="text-slate-100">No content found</p>
                       </div>
                     </td>
                   </tr>
@@ -189,7 +189,7 @@ export function AdminDashboard() {
                           </div>
                           <div>
                             <p className="font-medium text-white">{item.username}</p>
-                            <p className="text-xs text-slate-500">{item.email}</p>
+                            <p className="text-xs text-slate-100">{item.email}</p>
                           </div>
                         </div>
                       </td>
@@ -208,7 +208,7 @@ export function AdminDashboard() {
                           {item.link}
                         </a>
                         {item.description && (
-                          <p className="text-xs text-slate-500 mt-1 line-clamp-2">{item.description}</p>
+                          <p className="text-xs text-slate-100 mt-1 line-clamp-2">{item.description}</p>
                         )}
                       </td>
                       <td className="px-6 py-4">
@@ -220,11 +220,11 @@ export function AdminDashboard() {
                               </span>
                             ))
                           ) : (
-                            <span className="text-slate-600 text-sm">—</span>
+                            <span className="text-slate-500 text-sm">—</span>
                           )}
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-sm text-slate-400 whitespace-nowrap">
+                      <td className="px-6 py-4 text-sm text-slate-100 whitespace-nowrap">
                         {formatDate(item.created_at)}
                       </td>
                     </tr>
