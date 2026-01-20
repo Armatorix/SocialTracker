@@ -54,6 +54,7 @@ func main() {
 		middleware.CORSConfig{
 			AllowOrigins: []string{
 				"http://localhost:5173",
+				"http://localhost",
 			},
 			AllowHeaders: []string{
 				echo.HeaderAccept,
