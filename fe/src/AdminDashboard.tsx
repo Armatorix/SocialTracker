@@ -451,7 +451,7 @@ function AdminContent({
                         </div>
                       </td>
                       <td className="px-6 py-4 text-sm text-slate-100 whitespace-nowrap">
-                        {formatDate(item.created_at)}
+                        {formatDate(item.posted_at || item.created_at)}
                       </td>
                     </tr>
                   ))
@@ -803,7 +803,7 @@ function CreatorContent({
                           </span>
                         ))}
                         <span className="text-xs text-slate-200">
-                          {formatDate(item.created_at)}
+                          {formatDate(item.posted_at || item.created_at)}
                         </span>
                       </div>
                     </div>
