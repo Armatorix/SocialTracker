@@ -167,7 +167,7 @@ export function CreatorDashboard() {
             </div>
             <p className="text-red-400">{error}</p>
           </div>
-          <button onClick={() => setError('')} className="text-slate-500 hover:text-white transition-colors p-1">
+          <button onClick={() => setError('')} className="text-slate-200 hover:text-white transition-colors p-1">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -186,7 +186,7 @@ export function CreatorDashboard() {
             </div>
             <div>
               <h2 className="text-xl font-bold text-white">Connected Accounts</h2>
-              <p className="text-sm text-slate-100">{socialAccounts.length} accounts linked</p>
+              <p className="text-sm text-slate-600">{socialAccounts.length} accounts linked</p>
             </div>
           </div>
           <button
@@ -242,7 +242,7 @@ export function CreatorDashboard() {
           {socialAccounts.length === 0 ? (
             <div className="col-span-full bg-slate-800/50 backdrop-blur-sm rounded-2xl p-8 text-center border border-slate-700/50">
               <div className="w-16 h-16 rounded-full bg-slate-700/50 flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-8 h-8 text-slate-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
                 </svg>
               </div>
@@ -390,7 +390,7 @@ export function CreatorDashboard() {
           {content.length === 0 ? (
             <div className="bg-slate-800/50 backdrop-blur-sm rounded-2xl p-8 text-center border border-slate-700/50">
               <div className="w-16 h-16 rounded-full bg-slate-700/50 flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-8 h-8 text-slate-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                 </svg>
               </div>

@@ -90,7 +90,7 @@ export function App() {
                 </div>
                 <div className="hidden sm:block">
                   <p className="text-sm font-medium text-slate-200">{user.username}</p>
-                  <p className="text-xs text-slate-500 capitalize">{user.role}</p>
+                  <p className="text-xs text-slate-200 capitalize">{user.role}</p>
                 </div>
               </div>
               <button

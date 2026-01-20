@@ -348,7 +348,7 @@ function AdminContent({
           <div>
             <label className="block text-sm font-medium text-slate-100 mb-2">Username</label>
             <div className="relative">
-              <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
               <input
@@ -397,7 +397,7 @@ function AdminContent({
                     <td colSpan={5} className="px-6 py-16 text-center">
                       <div className="flex flex-col items-center gap-3">
                         <div className="w-16 h-16 rounded-full bg-slate-700/50 flex items-center justify-center">
-                          <svg className="w-8 h-8 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-8 h-8 text-slate-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
                           </svg>
                         </div>
@@ -446,7 +446,7 @@ function AdminContent({
                               </span>
                             ))
                           ) : (
-                            <span className="text-slate-500 text-sm">—</span>
+                            <span className="text-slate-200 text-sm">—</span>
                           )}
                         </div>
                       </td>
@@ -536,7 +536,7 @@ function CreatorContent({
             </div>
             <p className="text-red-400">{error}</p>
           </div>
-          <button onClick={() => setError('')} className="text-slate-500 hover:text-white transition-colors p-1">
+          <button onClick={() => setError('')} className="text-slate-200 hover:text-white transition-colors p-1">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -555,7 +555,7 @@ function CreatorContent({
             </div>
             <div>
               <h2 className="text-xl font-bold text-white">Connected Accounts</h2>
-              <p className="text-sm text-slate-100">{socialAccounts.length} accounts linked</p>
+              <p className="text-sm text-slate-600">{socialAccounts.length} accounts linked</p>
             </div>
           </div>
           <button
@@ -611,12 +611,12 @@ function CreatorContent({
         {socialAccounts.length === 0 ? (
           <div className="bg-slate-800/30 rounded-2xl p-8 text-center border border-dashed border-slate-600">
             <div className="w-16 h-16 rounded-full bg-slate-700/50 flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-8 h-8 text-slate-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
               </svg>
             </div>
             <p className="text-slate-100 mb-2">No accounts connected yet</p>
-            <p className="text-sm text-slate-500">Click "Add Account" to link your social media profiles</p>
+            <p className="text-sm text-slate-200">Click "Add Account" to link your social media profiles</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -632,12 +632,12 @@ function CreatorContent({
                     </div>
                     <div>
                       <p className="font-semibold text-white">{account.account_name}</p>
-                      <p className="text-xs text-slate-400 capitalize">{account.platform}</p>
+                      <p className="text-xs text-slate-100 capitalize">{account.platform}</p>
                     </div>
                   </div>
                   <button
                     onClick={() => handleDeleteAccount(account.id)}
-                    className="p-2 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                    className="p-2 text-slate-200 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all opacity-0 group-hover:opacity-100"
                     title="Delete account"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -645,7 +645,7 @@ function CreatorContent({
                     </svg>
                   </button>
                 </div>
-                <div className="text-xs text-slate-500 mb-3">
+                <div className="text-xs text-slate-200 mb-3">
                   Last sync: {formatDate(account.last_pull_at)}
                 </div>
                 <button
@@ -762,12 +762,12 @@ function CreatorContent({
         {myContent.length === 0 ? (
           <div className="bg-slate-800/30 rounded-2xl p-8 text-center border border-dashed border-slate-600">
             <div className="w-16 h-16 rounded-full bg-slate-700/50 flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-8 h-8 text-slate-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
               </svg>
             </div>
             <p className="text-slate-100 mb-2">No content tracked yet</p>
-            <p className="text-sm text-slate-500">Add content manually or sync from your connected accounts</p>
+            <p className="text-sm text-slate-200">Add content manually or sync from your connected accounts</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -794,7 +794,7 @@ function CreatorContent({
                         <p className="text-sm text-slate-100 mt-1">{item.description}</p>
                       )}
                       {item.original_text && (
-                        <p className="text-sm text-slate-500 mt-2 line-clamp-2 italic">"{item.original_text}"</p>
+                        <p className="text-sm text-slate-200 mt-2 line-clamp-2 italic">"{item.original_text}"</p>
                       )}
                       <div className="flex flex-wrap items-center gap-2 mt-3">
                         {item.tags && item.tags.map((tag, i) => (
@@ -802,7 +802,7 @@ function CreatorContent({
                             #{tag}
                           </span>
                         ))}
-                        <span className="text-xs text-slate-500">
+                        <span className="text-xs text-slate-200">
                           {formatDate(item.created_at)}
                         </span>
                       </div>
@@ -810,7 +810,7 @@ function CreatorContent({
                   </div>
                   <button
                     onClick={() => handleDeleteContent(item.id)}
-                    className="p-2 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all opacity-0 group-hover:opacity-100 shrink-0"
+                    className="p-2 text-slate-200 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all opacity-0 group-hover:opacity-100 shrink-0"
                     title="Delete content"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
