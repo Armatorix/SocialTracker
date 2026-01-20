@@ -1,19 +1,23 @@
-FROM golang:alpine AS builder
+FROM golang:1.25.5-bookworm
 
 WORKDIR /app
 
-COPY go.mod go.sum ./
-RUN go mod download
+COPY ./public/ ./public
+
+RUN  --mount=type=cache,target=/go/pkg/mod/ \
+    --mount=type=bind,source=go.sum,target=go.sum \
+    --mount=type=bind,source=go.mod,target=go.mod \
+    go mod download
+
+ENV GOCACHE=/root/.cache/go-build
 
 COPY . .
-RUN go build -o socialtracker main.go
 
-FROM alpine:latest
-
-WORKDIR /app
-
-COPY --from=builder /app/socialtracker .
+RUN --mount=type=cache,target=/go/pkg/mod/ \
+    --mount=type=cache,target="/root/.cache/go-build" \
+    --mount=type=bind,target=. \
+    go build -o /main .
 
 EXPOSE 8080
 
-CMD ["./socialtracker"]
+ENTRYPOINT ["/main"]

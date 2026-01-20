@@ -20,16 +20,13 @@ services:
       dockerfile: ./Dockerfile.dev
     container_name: socialtracker-app
     restart: unless-stopped
-    build: 
     env_file:
-      - .env
+      - ./be/.env
     environment:
       - PORT=8080
       - DATABASE_URL=postgres://socialtracker:socialtracker@postgres:5432/socialtracker?sslmode=disable
-      - REDIS_URL=redis:6379
     depends_on:
       - postgres
-      - redis
     develop:
       watch:
         - path: ./
@@ -39,7 +36,7 @@ services:
   fe:
     build:
       context: ./fe
-      dockerfile: ./Dockerfile.dev
+      dockerfile: Dockerfile.dev
     restart: on-failure
     environment:
       VITE_BACKEND_API: http://localhost:8080
@@ -48,14 +45,14 @@ services:
       - '5173:5173'
     develop:
       watch:
-        - path: ./web
+        - path: ./fe
           action: sync
           target: /app
           ignore:
             - node_modules
             - package.json
             - bun.lockb
-        - path: ./web/package.json
+        - path: ./fe/package.json
           action: rebuild
 
   oauth2-proxy:
@@ -88,7 +85,7 @@ services:
       - OAUTH2_PROXY_SET_XAUTHREQUEST=true
 
     depends_on:
-      - app
+      - be
       - dex
 
   dex:
@@ -103,4 +100,3 @@ services:
 
 volumes:
   postgres_data:
-  redis_data:
