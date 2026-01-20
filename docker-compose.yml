@@ -1,0 +1,106 @@
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: socialtracker-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=socialtracker
+      - POSTGRES_USER=socialtracker
+      - POSTGRES_PASSWORD=socialtracker
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+
+  be:
+    build:
+      context: ./be/
+      dockerfile: ./Dockerfile.dev
+    container_name: socialtracker-app
+    restart: unless-stopped
+    build: 
+    env_file:
+      - .env
+    environment:
+      - PORT=8080
+      - DATABASE_URL=postgres://socialtracker:socialtracker@postgres:5432/socialtracker?sslmode=disable
+      - REDIS_URL=redis:6379
+    depends_on:
+      - postgres
+      - redis
+    develop:
+      watch:
+        - path: ./
+          action: rebuild
+          target: /app
+
+  fe:
+    build:
+      context: ./fe
+      dockerfile: ./Dockerfile.dev
+    restart: on-failure
+    environment:
+      VITE_BACKEND_API: http://localhost:8080
+      VITE_USE_FS_ACCESS_API: 'false'
+    ports:
+      - '5173:5173'
+    develop:
+      watch:
+        - path: ./web
+          action: sync
+          target: /app
+          ignore:
+            - node_modules
+            - package.json
+            - bun.lockb
+        - path: ./web/package.json
+          action: rebuild
+
+  oauth2-proxy:
+    image: quay.io/oauth2-proxy/oauth2-proxy:v7.5.1
+    container_name: socialtracker-oauth2-proxy
+    restart: unless-stopped
+    ports:
+      - '80:4180'
+    extra_hosts:
+      - 'localhost:host-gateway'
+    environment:
+      # Configuration for OAuth2 Proxy
+      - OAUTH2_PROXY_UPSTREAMS=http://app:8080/
+      - OAUTH2_PROXY_HTTP_ADDRESS=0.0.0.0:4180
+
+      # Auth Provider Configuration (OIDC / Dex)
+      - OAUTH2_PROXY_PROVIDER=oidc
+      - OAUTH2_PROXY_PROVIDER_DISPLAY_NAME=socialtracker OIDC Provider
+      - OAUTH2_PROXY_OIDC_ISSUER_URL=http://localhost:5556/dex
+      - OAUTH2_PROXY_CLIENT_ID=socialtracker-client-id
+      - OAUTH2_PROXY_CLIENT_SECRET=socialtracker-client-secret
+      - OAUTH2_PROXY_REDIRECT_URL=http://localhost/oauth2/callback
+
+      # Cookie Configuration
+      - OAUTH2_PROXY_COOKIE_SECRET=1234123412341234
+      - OAUTH2_PROXY_EMAIL_DOMAINS=*
+
+      # Headers Configuration
+      - OAUTH2_PROXY_PASS_USER_HEADERS=true
+      - OAUTH2_PROXY_SET_XAUTHREQUEST=true
+
+    depends_on:
+      - app
+      - dex
+
+  dex:
+    image: ghcr.io/dexidp/dex:v2.38.0
+    container_name: socialtracker-dex
+    restart: unless-stopped
+    ports:
+      - '5556:5556'
+    volumes:
+      - ./dex/config.yaml:/config.yaml
+    command: ['dex', 'serve', '/config.yaml']
+
+volumes:
+  postgres_data:
+  redis_data:
