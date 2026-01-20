@@ -44,7 +44,7 @@ services:
       VITE_BACKEND_API: http://localhost:8080
       VITE_USE_FS_ACCESS_API: 'false'
     ports:
-      - '3000:5173'
+      - '5173:3000'
     develop:
       watch:
         - path: ./fe
