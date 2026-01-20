@@ -247,21 +247,20 @@ func (h *Handler) getCurrentUser(c echo.Context) (*models.User, error) {
 	// oauth2-proxy with PASS_USER_HEADERS=true sends X-Forwarded-* headers
 	userID := c.Request().Header.Get("X-Forwarded-User")
 	email := c.Request().Header.Get("X-Forwarded-Email")
+	username := c.Request().Header.Get("X-Forwarded-Preferred-Username")
 
-	// Fallback to X-Auth-Request-* headers
+	// Fallback to X-Auth-Request-* headers (for nginx auth_request setups)
 	if userID == "" {
 		userID = c.Request().Header.Get("X-Auth-Request-User")
 	}
 	if email == "" {
 		email = c.Request().Header.Get("X-Auth-Request-Email")
 	}
-
-	if userID == "" {
-		userID = "admin-001" // Default for testing
-		email = "admin@socialtracker.com"
+	if username == "" {
+		username = c.Request().Header.Get("X-Auth-Request-Preferred-Username")
 	}
+	
 
-	username := email
 	// Extract username from email if not provided separately
 	if idx := len(email); idx > 0 {
 		if atIdx := 0; atIdx < idx {

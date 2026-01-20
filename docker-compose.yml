@@ -81,7 +81,7 @@ services:
         - path: ./be
           action: rebuild
           target: /app
-        - path: ./web
+        - path: ./fe
           action: rebuild
           target: /app
 volumes:

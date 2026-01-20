@@ -18,6 +18,11 @@ export const api = {
     return res.json();
   },
 
+  logout: (): void => {
+    // Redirect to OAuth2 proxy sign out endpoint
+    window.location.href = '/oauth2/sign_out?rd=/';
+  },
+
   // Social Accounts
   getSocialAccounts: async (): Promise<SocialAccount[]> => {
     const res = await fetchWithCredentials(`${API_BASE_URL}/social-accounts`);
