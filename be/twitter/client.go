@@ -2,13 +2,67 @@ package twitter
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"time"
 )
+
+// RateLimitError represents a rate limit error from the X API
+type RateLimitError struct {
+	RetryAfter int `json:"retry_after"` // seconds until rate limit resets
+}
+
+func (e *RateLimitError) Error() string {
+	if e.RetryAfter > 0 {
+		return fmt.Sprintf("rate limit exceeded, retry after %d seconds", e.RetryAfter)
+	}
+	return "rate limit exceeded"
+}
+
+// IsRateLimitError checks if an error is a rate limit error (including wrapped errors)
+func IsRateLimitError(err error) (*RateLimitError, bool) {
+	var rle *RateLimitError
+	if errors.As(err, &rle) {
+		return rle, true
+	}
+	return nil, false
+}
+
+// parseRateLimitError extracts retry-after information from response headers
+func parseRateLimitError(resp *http.Response) *RateLimitError {
+	retryAfter := 0
+	
+	// Try x-rate-limit-reset header (Unix timestamp)
+	if resetStr := resp.Header.Get("x-rate-limit-reset"); resetStr != "" {
+		if resetTime, err := strconv.ParseInt(resetStr, 10, 64); err == nil {
+			retryAfter = int(resetTime - time.Now().Unix())
+			if retryAfter < 0 {
+				retryAfter = 60 // Default to 60 seconds if already passed
+			}
+		}
+	}
+	
+	// Try Retry-After header (seconds)
+	if retryAfter == 0 {
+		if retryStr := resp.Header.Get("Retry-After"); retryStr != "" {
+			if seconds, err := strconv.Atoi(retryStr); err == nil {
+				retryAfter = seconds
+			}
+		}
+	}
+	
+	// Default to 15 minutes if no header found (Twitter's typical rate limit window)
+	if retryAfter == 0 {
+		retryAfter = 900
+	}
+	
+	return &RateLimitError{RetryAfter: retryAfter}
+}
 
 // Client handles Twitter/X API interactions
 type Client struct {
@@ -115,6 +169,10 @@ func (c *Client) GetUserByUsername(username string) (*UserResponse, error) {
 		return nil, fmt.Errorf("failed to read response: %w", err)
 	}
 
+	if resp.StatusCode == http.StatusTooManyRequests {
+		return nil, parseRateLimitError(resp)
+	}
+
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("API error (status %d): %s", resp.StatusCode, string(body))
 	}
@@ -169,6 +227,10 @@ func (c *Client) GetUserTweets(userID string, maxResults int, sinceID string) (*
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read response: %w", err)
+	}
+
+	if resp.StatusCode == http.StatusTooManyRequests {
+		return nil, parseRateLimitError(resp)
 	}
 
 	if resp.StatusCode != http.StatusOK {
@@ -232,6 +294,10 @@ func (c *UserClient) GetAuthenticatedUser() (*UserResponse, error) {
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read response: %w", err)
+	}
+
+	if resp.StatusCode == http.StatusTooManyRequests {
+		return nil, parseRateLimitError(resp)
 	}
 
 	if resp.StatusCode != http.StatusOK {
@@ -299,6 +365,10 @@ func (c *UserClient) GetUserTweets(userID string, maxResults int, sinceID string
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read response: %w", err)
+	}
+
+	if resp.StatusCode == http.StatusTooManyRequests {
+		return nil, parseRateLimitError(resp)
 	}
 
 	if resp.StatusCode != http.StatusOK {

@@ -126,6 +126,13 @@ func (h *Handler) PullContentFromPlatform(c echo.Context) error {
 	case "twitter":
 		response, err = h.syncTwitterAccount(userID, account)
 		if err != nil {
+			// Check if it's a rate limit error
+			if rle, ok := twitter.IsRateLimitError(err); ok {
+				return c.JSON(http.StatusTooManyRequests, map[string]interface{}{
+					"error":       "Rate limit exceeded. Too many requests to X/Twitter API.",
+					"retry_after": rle.RetryAfter,
+				})
+			}
 			return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		}
 	default:

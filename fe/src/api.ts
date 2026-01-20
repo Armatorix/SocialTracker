@@ -2,6 +2,37 @@ import type { User, SocialAccount, Content, ContentWithUser, CreateSocialAccount
 
 const API_BASE_URL = '/api';
 
+// Helper to format retry time in a human-readable way
+const formatRetryTime = (seconds: number): string => {
+  if (seconds < 60) {
+    return `${seconds} second${seconds !== 1 ? 's' : ''}`;
+  }
+  const minutes = Math.ceil(seconds / 60);
+  return `${minutes} minute${minutes !== 1 ? 's' : ''}`;
+};
+
+// Custom error class for rate limit errors
+export class RateLimitError extends Error {
+  retryAfter: number;
+  isRateLimitError = true as const;
+  
+  constructor(message: string, retryAfter: number) {
+    super(message);
+    this.name = 'RateLimitError';
+    this.retryAfter = retryAfter;
+  }
+}
+
+// Type guard for rate limit errors (more reliable than instanceof)
+export function isRateLimitError(err: unknown): err is RateLimitError {
+  return (
+    err !== null &&
+    typeof err === 'object' &&
+    'isRateLimitError' in err &&
+    (err as RateLimitError).isRateLimitError === true
+  );
+}
+
 // Helper to make fetch requests with credentials included
 const fetchWithCredentials = (url: string, options: RequestInit = {}): Promise<Response> => {
   return fetch(url, {
@@ -51,7 +82,33 @@ export const api = {
     const res = await fetchWithCredentials(`${API_BASE_URL}/social-accounts/${accountId}/pull`, {
       method: 'POST',
     });
-    if (!res.ok) throw new Error('Failed to pull content');
+    if (res.status === 429) {
+      const data = await res.json();
+      const retryAfter = data.retry_after || 900;
+      throw new RateLimitError(
+        `X/Twitter rate limit exceeded. Please try again in ${formatRetryTime(retryAfter)}.`,
+        retryAfter
+      );
+    }
+    if (!res.ok) {
+      // Try to get error details from response
+      try {
+        const data = await res.json();
+        const errorMsg = data.error || 'Failed to pull content';
+        // Check if error message indicates rate limiting
+        if (errorMsg.toLowerCase().includes('rate limit') || errorMsg.includes('429') || errorMsg.includes('too many')) {
+          throw new RateLimitError(
+            `X/Twitter rate limit exceeded. Please try again later.`,
+            900
+          );
+        }
+        throw new Error(errorMsg);
+      } catch (parseErr) {
+        if (parseErr instanceof RateLimitError) throw parseErr;
+        if (isRateLimitError(parseErr)) throw parseErr;
+        throw new Error('Failed to pull content');
+      }
+    }
     return res.json();
   },
 

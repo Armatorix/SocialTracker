@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { api } from './api';
+import { api, isRateLimitError } from './api';
 import type { SocialAccount, Content } from './types';
 
 const platformStyles: Record<string, string> = {
@@ -56,6 +56,8 @@ export function CreatorDashboard() {
   });
   const [twitterOAuthConfigured, setTwitterOAuthConfigured] = useState(false);
   const [connectingTwitter, setConnectingTwitter] = useState(false);
+  const [rateLimitInfo, setRateLimitInfo] = useState<{ accountId: number; retryAfter: number; retryAt: Date } | null>(null);
+  const [syncingAccountId, setSyncingAccountId] = useState<number | null>(null);
 
   const loadData = async () => {
     try {
@@ -92,6 +94,23 @@ export function CreatorDashboard() {
     }
   }, []);
 
+  // Rate limit countdown timer
+  useEffect(() => {
+    if (!rateLimitInfo) return;
+    
+    const interval = setInterval(() => {
+      const now = new Date();
+      if (now >= rateLimitInfo.retryAt) {
+        setRateLimitInfo(null);
+      } else {
+        // Force re-render to update countdown
+        setRateLimitInfo({ ...rateLimitInfo });
+      }
+    }, 1000);
+    
+    return () => clearInterval(interval);
+  }, [rateLimitInfo?.retryAt]);
+
   const handleConnectTwitter = async () => {
     try {
       setConnectingTwitter(true);
@@ -125,7 +144,14 @@ export function CreatorDashboard() {
   };
 
   const handlePullContent = async (accountId: number) => {
+    // Check if this account is rate limited
+    if (rateLimitInfo && rateLimitInfo.accountId === accountId && new Date() < rateLimitInfo.retryAt) {
+      return; // Still rate limited, button should be disabled
+    }
+    
     try {
+      setSyncingAccountId(accountId);
+      setError('');
       const result = await api.pullContent(accountId);
       let message = result.message;
       if (result.synced_count > 0 || result.skipped_count > 0) {
@@ -137,10 +163,26 @@ export function CreatorDashboard() {
       if (result.errors && result.errors.length > 0) {
         message += `\n\nErrors: ${result.errors.join(', ')}`;
       }
+      // Clear any previous rate limit for this account
+      if (rateLimitInfo?.accountId === accountId) {
+        setRateLimitInfo(null);
+      }
       alert(message);
       loadData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to pull content');
+      if (isRateLimitError(err)) {
+        setRateLimitInfo({
+          accountId,
+          retryAfter: err.retryAfter,
+          retryAt: new Date(Date.now() + err.retryAfter * 1000),
+        });
+        // Clear generic error since we're showing the rate limit banner
+        setError('');
+      } else {
+        setError(err instanceof Error ? err.message : 'Failed to pull content');
+      }
+    } finally {
+      setSyncingAccountId(null);
     }
   };
 
@@ -177,6 +219,20 @@ export function CreatorDashboard() {
     return new Date(dateString).toLocaleString();
   };
 
+  const formatRemainingTime = (retryAt: Date): string => {
+    const diff = Math.max(0, Math.ceil((retryAt.getTime() - Date.now()) / 1000));
+    if (diff < 60) {
+      return `${diff}s`;
+    }
+    const minutes = Math.floor(diff / 60);
+    const seconds = diff % 60;
+    return `${minutes}m ${seconds}s`;
+  };
+
+  const isAccountRateLimited = (accountId: number): boolean => {
+    return !!(rateLimitInfo && rateLimitInfo.accountId === accountId && new Date() < rateLimitInfo.retryAt);
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center py-12">
@@ -194,8 +250,36 @@ export function CreatorDashboard() {
         </h1>
         <p className="text-slate-300">Manage your social accounts and track your content</p>
       </div>
+
+      {/* Rate Limit Warning Banner */}
+      {rateLimitInfo && new Date() < rateLimitInfo.retryAt && (
+        <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 mb-6 animate-fade-in">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center shrink-0">
+              <svg className="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <p className="text-amber-400 font-semibold">X/Twitter Rate Limit Reached</p>
+              <p className="text-amber-300/80 text-sm">
+                Too many requests. You can sync again in{' '}
+                <span className="font-mono font-semibold">{formatRemainingTime(rateLimitInfo.retryAt)}</span>
+              </p>
+            </div>
+            <button 
+              onClick={() => setRateLimitInfo(null)} 
+              className="text-amber-400 hover:text-amber-300 transition-colors p-1"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
       
-      {error && (
+      {error && !rateLimitInfo && (
         <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-4 mb-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center shrink-0">
@@ -339,12 +423,38 @@ export function CreatorDashboard() {
                 </div>
                 <button
                   onClick={() => handlePullContent(account.id)}
-                  className="w-full py-2.5 rounded-xl font-medium bg-slate-700 text-white border border-slate-600 hover:bg-slate-600 hover:border-purple-500/50 transition-all flex items-center justify-center gap-2"
+                  disabled={syncingAccountId === account.id || isAccountRateLimited(account.id)}
+                  className={`w-full py-2.5 rounded-xl font-medium border transition-all flex items-center justify-center gap-2 ${
+                    isAccountRateLimited(account.id)
+                      ? 'bg-amber-500/10 text-amber-400 border-amber-500/30 cursor-not-allowed'
+                      : syncingAccountId === account.id
+                      ? 'bg-slate-700 text-slate-300 border-slate-600 cursor-wait'
+                      : 'bg-slate-700 text-white border-slate-600 hover:bg-slate-600 hover:border-purple-500/50'
+                  }`}
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
-                  Sync Content
+                  {isAccountRateLimited(account.id) ? (
+                    <>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      Retry in {formatRemainingTime(rateLimitInfo!.retryAt)}
+                    </>
+                  ) : syncingAccountId === account.id ? (
+                    <>
+                      <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Syncing...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      Sync Content
+                    </>
+                  )}
                 </button>
               </div>
             ))
