@@ -37,6 +37,8 @@ services:
       - '8080:8080'
     depends_on:
       - postgres
+    profiles:
+      - localdev
     develop:
       watch:
         - path: ./
@@ -65,7 +67,8 @@ services:
             - bun.lockb
         - path: ./fe/package.json
           action: rebuild
-
+    profiles:
+      - localdev
   oauth2-proxy:
     image: quay.io/oauth2-proxy/oauth2-proxy:v7.5.1
     container_name: socialtracker-oauth2-proxy
@@ -96,7 +99,6 @@ services:
       - OAUTH2_PROXY_SET_XAUTHREQUEST=true
 
     depends_on:
-      - be
       - dex
 
   dex:
@@ -108,6 +110,21 @@ services:
     volumes:
       - ./dex/config.yaml:/config.yaml
     command: ['dex', 'serve', '/config.yaml']
-
+  befe:
+    build:
+      dockerfile: ./Dockerfile
+    restart: on-failure
+    env_file:
+      - ./be/.env
+    ports:
+      - '8080:8080'
+    develop:
+      watch:
+        - path: ./be
+          action: rebuild
+          target: /app
+        - path: ./web
+          action: rebuild
+          target: /app
 volumes:
   postgres_data:
